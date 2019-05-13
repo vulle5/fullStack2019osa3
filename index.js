@@ -37,10 +37,6 @@ app.use(
   morgan(":method :url :status :res[content-length] - :response-time ms :type")
 );
 
-app.get("/", (req, res) => {
-  res.send("<h1>Hello World!</h1>");
-});
-
 app.get("/info", (req, res) => {
   res.send(
     `<p>Puhelinluettelossa ${people.length} henkilön tiedot</p><p>${Date()}</p>`
@@ -100,6 +96,15 @@ app.delete("/api/persons/:id", (req, res) => {
 
   res.status(204).end();
 });
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static("client/build"));
+
+  const path = require("path");
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "client", "build", "index.html"));
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
