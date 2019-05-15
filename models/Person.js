@@ -5,7 +5,7 @@ const keys = require("../config/keys");
 
 mongoose
   .connect(keys.mongoURI, { useNewUrlParser: true })
-  .then(result => {
+  .then(() => {
     console.log("connected to MongoDB");
   })
   .catch(error => {

@@ -24,7 +24,7 @@ const Person = mongoose.model("people");
 if (process.argv[3] || process.argv[4]) {
   new Person({ name: process.argv[3], num: process.argv[4] })
     .save()
-    .then(response => {
+    .then(() => {
       console.log(
         `lisätään ${process.argv[3]} numero ${process.argv[4]} luetteloon`
       );

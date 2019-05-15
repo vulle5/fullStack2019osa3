@@ -14,7 +14,7 @@ const app = express();
 
 app.use(cors());
 app.use(bodyParser.json());
-morgan.token("type", function(req, res) {
+morgan.token("type", function(req) {
   return JSON.stringify(req.body);
 });
 app.use(
@@ -37,7 +37,7 @@ app.get("/api/persons", (req, res) => {
   });
 });
 
-app.get("/api/persons/:id", (req, res) => {
+app.get("/api/persons/:id", (req, res, next) => {
   Person.findById(req.params.id)
     .then(person => {
       res.json(person.toJSON());
