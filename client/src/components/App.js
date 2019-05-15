@@ -18,6 +18,14 @@ const App = () => {
     getPersons();
   }, []);
 
+  const createBanner = (type, time, message) => {
+    setBannerType(type);
+    setBannerMessage(message);
+    setTimeout(() => {
+      setBannerMessage(null);
+    }, time);
+  };
+
   const getPersons = () => {
     personService.getAll().then(persons => setPersons(persons));
   };
@@ -40,13 +48,11 @@ const App = () => {
         .deletePerson(id)
         .then(() => getPersons())
         .catch(error => {
-          setBannerType("error");
-          setBannerMessage(
+          createBanner(
+            "error",
+            5000,
             `Henkilö '${name}' on jo valitettavasti poistettu palvelimelta`
           );
-          setTimeout(() => {
-            setBannerMessage(null);
-          }, 5000);
           setPersons(persons.filter(person => person.id !== id));
         });
     }
@@ -74,14 +80,14 @@ const App = () => {
       }
     } else {
       personService.create(personObject).then(person => {
-        setBannerType("success");
-        setBannerMessage(`Lisätty ${person.name}`);
-        setTimeout(() => {
-          setBannerMessage(null);
-        }, 5000);
-        setPersons(persons.concat(person));
-        setNewName("");
-        setNewNumber("");
+        if (person.error) {
+          createBanner("error", 5000, `${person.error}`);
+        } else {
+          createBanner("success", 5000, `Lisätty ${person.name}`);
+          setPersons(persons.concat(person));
+          setNewName("");
+          setNewNumber("");
+        }
       });
     }
   };

@@ -1,32 +1,16 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
 const cors = require("cors");
+// This require MUST be before any file that requires it
+require("./models/Person");
+const errorHandler = require("./middleware/errorHandle");
+const unknownEndpoint = require("./middleware/unknownEndpoint");
+
+const Person = mongoose.model("people");
 
 const app = express();
-
-let people = [
-  {
-    name: "Arto Hellas",
-    num: "040-123456",
-    id: 1
-  },
-  {
-    name: "Martti Tienari",
-    num: "040-123456",
-    id: 2
-  },
-  {
-    name: "Arto Järvinen",
-    num: "040-123456",
-    id: 3
-  },
-  {
-    name: "Lea Kutvonen",
-    num: "040-123456",
-    id: 4
-  }
-];
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -38,64 +22,75 @@ app.use(
 );
 
 app.get("/info", (req, res) => {
-  res.send(
-    `<p>Puhelinluettelossa ${people.length} henkilön tiedot</p><p>${Date()}</p>`
-  );
+  Person.find({}).then(people => {
+    res.send(
+      `<p>Puhelinluettelossa ${
+        people.length
+      } henkilön tiedot</p><p>${Date()}</p>`
+    );
+  });
 });
 
 app.get("/api/persons", (req, res) => {
-  res.json(people);
+  Person.find({}).then(people => {
+    res.json(people.map(person => person.toJSON()));
+  });
 });
 
 app.get("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const person = people.find(person => person.id === id);
-
-  if (person) {
-    res.json(person);
-  } else {
-    res.status(404).end();
-  }
+  Person.findById(req.params.id)
+    .then(person => {
+      res.json(person.toJSON());
+    })
+    .catch(err => next(err));
 });
 
-const generateNewID = max => {
-  return Math.floor(Math.random() * Math.floor(max));
-};
-
-app.post("/api/persons", (req, res) => {
+app.post("/api/persons", (req, res, next) => {
   const body = req.body;
 
-  if (!body.name) {
-    return res.status(400).json({
-      error: "name is missing"
-    });
-  } else if (!body.num) {
-    return res.status(400).json({
-      error: "number is missing"
-    });
-  } else if (people.some(person => person.name === body.name)) {
-    return res.status(400).json({
-      error: "name must be unique"
-    });
-  }
-
-  const newPerson = {
+  const newPerson = new Person({
     name: body.name,
-    num: body.num,
-    id: generateNewID(99999)
+    num: body.num
+  });
+
+  newPerson
+    .save()
+    .then(savedPerson => {
+      res.json(savedPerson.toJSON());
+    })
+    .catch(err => next(err));
+});
+
+app.delete("/api/persons/:id", (req, res, next) => {
+  Person.findByIdAndRemove(req.params.id)
+    .then(result => {
+      if (result) {
+        res.status(204).end();
+      } else {
+        res.status(404).end();
+      }
+    })
+    .catch(err => next(err));
+});
+
+app.put("/api/persons/:id", (req, res, next) => {
+  const body = req.body;
+
+  const person = {
+    name: body.name,
+    num: body.num
   };
 
-  people = people.concat(newPerson);
-
-  res.json(newPerson);
+  Person.findByIdAndUpdate(req.params.id, person, { new: true })
+    .then(updatedPerson => {
+      res.json(updatedPerson.toJSON());
+    })
+    .catch(err => next(err));
 });
 
-app.delete("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  people = people.filter(person => person.id !== id);
+app.use(unknownEndpoint);
 
-  res.status(204).end();
-});
+app.use(errorHandler);
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static("client/build"));
